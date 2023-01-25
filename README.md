@@ -2,7 +2,7 @@
 Complete source code for the undergraduate student project by John Rufino Macasaet and Christian Jay Adducul under the Ubiquitous Computing Laboratory, Electrical and Electronics Engineering Institute, University of the Philippines.
 
 ## Training Notebooks
-You can use [Google Colab](colab.research.google.com) to run the training notebooks. Alternatively, you can set up your own local Jupyter notebook server with the dependencies in the `requirements.txt` file.
+You can use [Google Colab](colab.research.google.com) to run the training notebooks. Alternatively, you can set up your own local Jupyter notebook server with the dependencies in the `requirements.txt` file. For local instances, place the `datasets` folder in the same directory as the Notebook being run. You can load the dataset from the preprocessed `.npy` file by setting `LOAD_NPY=True` or process the dataset manually by setting it to `False`.
 
 ## Inference Script
 The scripts come in `.py` files intended for the Raspberry Pi 3 Model B. By default, the scripts come with the pretrained models and generated test tensors. If you have trained your own models, please use the same file names to avoid issues with the inference scripts.
