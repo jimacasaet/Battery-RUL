@@ -65,24 +65,15 @@ from pathlib import Path
 class RNNModel(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(RNNModel, self).__init__()
+        
+        self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
+        self.linear = nn.Linear(hidden_size, output_size)
 
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-
-        self.i2h = nn.Linear(input_size, hidden_size, bias=False)
-        self.h2h = nn.Linear(hidden_size, hidden_size)
-        self.h2o = nn.Linear(hidden_size, output_size)
-
-    def forward(self, x, hidden_state):
-        x = self.i2h(x)
-        hidden_state = self.h2h(hidden_state)
-        hidden_state = F.relu(x + hidden_state)
-        out = self.h2o(hidden_state)
-        return out, hidden_state
-
-    def init_zero_hidden(self):
-        return torch.zeros(1, self.hidden_size)
+    def forward(self, x):   
+        
+        hidden = self.rnn(x.unsqueeze(0))[0]
+        output = self.linear(hidden)
+        return output
 
 # Compute for accuracy
 def accuracy(y_test, y_pred):
@@ -95,12 +86,10 @@ def test(loaded_model, X_test, Y_test):
     loss_fn = nn.HuberLoss()
     loaded_model.eval()
     with torch.inference_mode():
-        hidden = loaded_model.init_zero_hidden()
-        hidden = hidden.to(device)
         test_out = []
         for i in range(X_test.size()[0]):
             # 1. Forward Pass
-            test_output, hidden = loaded_model(X_test[i], hidden)
+            test_output = loaded_model(X_test[i])
             test_out.append(test_output)
                 
         y_pred = torch.stack(test_out).to(device)
@@ -154,7 +143,7 @@ for batt, idx in zip(Battery_list, range(len(Battery_list))):
     Y_test = torch.load(target_path)
 
     input_size = 22
-    hidden_size = 10
+    hidden_size = 64
     output_size = 1
 
     # load saved model
@@ -164,13 +153,12 @@ for batt, idx in zip(Battery_list, range(len(Battery_list))):
                         output_size=output_size)
 
     # Load the state_dict of our saved model (this will update the new instance of our model with trained weights)
-    loadedmodel.load_state_dict(torch.load(f=model_save_path))
-    loadedmodel.to(device)
+    loadedmodel.load_state_dict(torch.load(f=model_save_path, map_location=torch.device(device)))
 
     # get predictions
     test_loss, Y_test, y_pred = test(loaded_model=loadedmodel,
-                                    X_test=X_test,
-                                    Y_test=Y_test)
+                                     X_test=X_test,
+                                     Y_test=Y_test)
 
     acc = accuracy(Y_test.cpu().detach().numpy(), y_pred.squeeze(-1).cpu().detach().numpy())
     mae = mean_absolute_error(y_pred.squeeze(-1).cpu().detach().numpy(), Y_test.cpu().detach().numpy())
@@ -186,6 +174,8 @@ for batt, idx in zip(Battery_list, range(len(Battery_list))):
 
     idx_pred = (y_pred<Threshold).nonzero().squeeze()  # search idx less than threshold
     RUL_pred = idx_pred[0][0]                        # first entry is pred RUL
+    if(torch.Tensor(Y_test[int(RUL_pred + 1)])>Threshold):
+        RUL_pred = idx_pred[1][0]
     RUL_error = RUL_true - RUL_pred
     rul_preds_list[batt] = RUL_pred
     # if positive value, earlier than true RUL; 
